@@ -1,5 +1,7 @@
 package com.techelevator;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -7,14 +9,17 @@ import java.util.Scanner;
 import javax.sql.DataSource;
 
 import com.techelevator.dao.JdbcUserDao;
+import com.techelevator.model.Neo;
+import com.techelevator.model.NeoFeedResponse;
 import com.techelevator.model.User;
 import com.techelevator.dao.UserDao;
 import com.techelevator.security.PasswordHasher;
 
+import com.techelevator.service.NEOService;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.bouncycastle.util.encoders.Base64;
 
-public class UserManagerCli {
+public class NasaDbCli {
 
     private final UserDao userDao;
     private final Scanner userInput;
@@ -23,11 +28,11 @@ public class UserManagerCli {
 
     public static void main(String[] args) {
         BasicDataSource dataSource = new BasicDataSource();
-        dataSource.setUrl("jdbc:postgresql://localhost:5432/user-manager");
+        dataSource.setUrl("jdbc:postgresql://localhost:5432/nasa_db");
         dataSource.setUsername("postgres");
         dataSource.setPassword("postgres1");
 
-        UserManagerCli application = new UserManagerCli(dataSource);
+        NasaDbCli application = new NasaDbCli(dataSource);
         application.run();
     }
 
@@ -36,7 +41,7 @@ public class UserManagerCli {
      *
      * @param datasource the connection information to the SQL database
      */
-    public UserManagerCli(DataSource datasource) {
+    public NasaDbCli(DataSource datasource) {
         passwordHasher = new PasswordHasher();
         userDao = new JdbcUserDao(datasource);
         userInput = new Scanner(System.in);
@@ -56,6 +61,8 @@ public class UserManagerCli {
                 addNewUser();
             } else if ("s".equalsIgnoreCase(option)) {
                 showUsers();
+            } else if ("n".equalsIgnoreCase(option)) {
+                showNearEarthObjects();
             } else if ("l".equalsIgnoreCase(option)) {
                 loginUser();
             } else if ("q".equalsIgnoreCase(option)) {
@@ -65,6 +72,66 @@ public class UserManagerCli {
                 System.out.println(option + " is not a valid option. Please select again.");
             }
         }
+    }
+
+    private void showNearEarthObjects() {
+        if (loggedInUser == null) {
+            System.out.println("Sorry. Only logged in users can see other users.");
+            System.out.println("Press enter to continue...");
+            System.out.flush();
+            userInput.nextLine();
+            return;
+        }
+        LocalDate date = null;
+        System.out.print("Date to show NEOs (hit enter for today or yyyy-mm-dd): ");
+        String strDate = userInput.nextLine();
+        try {
+            date = LocalDate.parse(strDate);
+        } catch (DateTimeParseException e) {
+            System.out.println("Using today's date");
+        }
+        if (date == null) {
+            date = LocalDate.now();
+        }
+        NEOService service = new NEOService();
+        NeoFeedResponse response = service.getNEOData(date + "");
+        displayNeoObjects(response);
+    }
+
+    private void displayNeoObjects(NeoFeedResponse response){
+        // for each loop -- we are loop through the keys
+        for (String key: response.getNearEarthObjects().keySet()) {
+            // grab the list that is the value from the key
+            List<Neo> neoList = response.getNearEarthObjects().get(key);
+            int count = neoList.size();
+            System.out.println("For Date: " +
+                    key +
+                    " there are " +
+                    count + " near earth objects");
+            String code = "\u001B[0m";
+
+            // for each neo
+            for (Neo n : neoList) {
+                // if potentially hazardous -- change text color to red
+                if (n.isPotentiallyHazardousAsteroid()) {
+                    code = "\u001B[31m";
+                }
+                System.out.println(code + "Id: " + n.getId());
+                System.out.println("\tName: " + n.getName());
+                System.out.println("\tPotentially hazardous? " + n.isPotentiallyHazardousAsteroid());
+                System.out.println("\tEstimated Diameter:");
+                System.out.println("\t\tMin (in miles): " +
+                        n.getEstimatedDiameter().getMiles().getEstimatedDiameterMin());
+                if (n.isPotentiallyHazardousAsteroid()) { // reset color code to white!
+                    code = "\u001B[0m";
+                }
+                System.out.println("\t\tMax: " +
+                        n.getEstimatedDiameter().getMiles().getGetEstimatedDiameterMax() + code);
+
+            }
+        }
+
+
     }
 
     /**
@@ -169,6 +236,7 @@ public class UserManagerCli {
     private void printMenu() {
         System.out.println("(A)dd a new User");
         System.out.println("(S)how all users");
+        System.out.println("(N)ear Earth Objects");
         System.out.println("(L)og in");
         System.out.println("(Q)uit");
         System.out.println();

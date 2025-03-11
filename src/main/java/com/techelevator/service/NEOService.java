@@ -1,6 +1,7 @@
 package com.techelevator.service;
 
-import org.example.model.NeoFeedResponse;
+
+import com.techelevator.model.NeoFeedResponse;
 import org.springframework.web.client.RestTemplate;
 
 public class NEOService {

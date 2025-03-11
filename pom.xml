@@ -61,6 +61,11 @@
 			<artifactId>jackson-annotations</artifactId>
 			<version>2.18.2</version>
 		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-web</artifactId>
+			<version>6.1.12</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -79,7 +84,7 @@
             <artifactId>exec-maven-plugin</artifactId>
             <version>1.2.1</version>
             <configuration>
-                <mainClass>com.techelevator.UserManagerCli</mainClass>
+                <mainClass>com.techelevator.NasaDbCli</mainClass>
             </configuration>
         </plugin>
     </plugins>
