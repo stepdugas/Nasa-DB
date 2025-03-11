@@ -8,7 +8,9 @@ import java.util.Scanner;
 
 import javax.sql.DataSource;
 
+import com.techelevator.dao.JdbcNeoDao;
 import com.techelevator.dao.JdbcUserDao;
+import com.techelevator.dao.NeoDao;
 import com.techelevator.model.Neo;
 import com.techelevator.model.NeoFeedResponse;
 import com.techelevator.model.User;
@@ -22,9 +24,11 @@ import org.bouncycastle.util.encoders.Base64;
 public class NasaDbCli {
 
     private final UserDao userDao;
+    private final NeoDao neoDao;
     private final Scanner userInput;
     private final PasswordHasher passwordHasher;
     private User loggedInUser;
+    private List <Neo> list;
 
     public static void main(String[] args) {
         BasicDataSource dataSource = new BasicDataSource();
@@ -44,6 +48,7 @@ public class NasaDbCli {
     public NasaDbCli(DataSource datasource) {
         passwordHasher = new PasswordHasher();
         userDao = new JdbcUserDao(datasource);
+        neoDao = new JdbcNeoDao(datasource);
         userInput = new Scanner(System.in);
     }
 
@@ -130,7 +135,28 @@ public class NasaDbCli {
 
             }
         }
+        System.out.println("Save a neo to the database? (y/n)");
+        if(userInput.nextLine().equalsIgnoreCase("y")){
+            savetoDatabase(date);
+        }
 
+
+    }
+
+    private void savetoDatabase (LocalDate date, List<Neo> neoList){
+        System.out.println("Enter the neo id to save: ");
+        String neoId = userInput.nextLine();
+        boolean isFound = false;
+        for (Neo n : neoList) {
+            if (n.getId().equalsIgnoreCase(neoId)){
+                isFound = true;
+                neoDao.saveNeo(n, loggedInUser.getUserId(), date);
+                break;
+            }
+        }
+        if (!isFound) {
+            System.out.println("Neo id not found!");
+        }
 
     }
 
@@ -154,8 +180,9 @@ public class NasaDbCli {
         String password = userInput.nextLine();
 
         if (isUsernameAndPasswordValid(username, password)) {
-            loggedInUser = new User();
-            loggedInUser.setUsername(username);
+//            loggedInUser = new User();
+//            loggedInUser.setUsername(username);
+            loggedInUser = userDao.getUserByUsername(username);
             System.out.println("Welcome " + username + "!");
             System.out.println();
         } else {
