@@ -21,14 +21,14 @@ import com.techelevator.service.NEOService;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.bouncycastle.util.encoders.Base64;
 
-public class NasaDbCli {
+public class NasaDBCli {
 
     private final UserDao userDao;
     private final NeoDao neoDao;
     private final Scanner userInput;
     private final PasswordHasher passwordHasher;
     private User loggedInUser;
-    private List <Neo> list;
+    private List<Neo> neoList;
 
     public static void main(String[] args) {
         BasicDataSource dataSource = new BasicDataSource();
@@ -36,7 +36,7 @@ public class NasaDbCli {
         dataSource.setUsername("postgres");
         dataSource.setPassword("postgres1");
 
-        NasaDbCli application = new NasaDbCli(dataSource);
+        NasaDBCli application = new NasaDBCli(dataSource);
         application.run();
     }
 
@@ -45,7 +45,7 @@ public class NasaDbCli {
      *
      * @param datasource the connection information to the SQL database
      */
-    public NasaDbCli(DataSource datasource) {
+    public NasaDBCli(DataSource datasource) {
         passwordHasher = new PasswordHasher();
         userDao = new JdbcUserDao(datasource);
         neoDao = new JdbcNeoDao(datasource);
@@ -79,7 +79,7 @@ public class NasaDbCli {
         }
     }
 
-    private void showNearEarthObjects() {
+    private void showNearEarthObjects(){
         if (loggedInUser == null) {
             System.out.println("Sorry. Only logged in users can see other users.");
             System.out.println("Press enter to continue...");
@@ -92,30 +92,31 @@ public class NasaDbCli {
         String strDate = userInput.nextLine();
         try {
             date = LocalDate.parse(strDate);
-        } catch (DateTimeParseException e) {
+        } catch (DateTimeParseException e){
+            // swallow the exception
             System.out.println("Using today's date");
         }
-        if (date == null) {
+        if (date == null){
             date = LocalDate.now();
         }
         NEOService service = new NEOService();
         NeoFeedResponse response = service.getNEOData(date + "");
-        displayNeoObjects(response);
+        displayNeoObjects(response, date);
     }
 
-    private void displayNeoObjects(NeoFeedResponse response){
+    private void displayNeoObjects(NeoFeedResponse response, LocalDate date){
         // for each loop -- we are loop through the keys
         for (String key: response.getNearEarthObjects().keySet()) {
             // grab the list that is the value from the key
-            List<Neo> neoList = response.getNearEarthObjects().get(key);
+            neoList = response.getNearEarthObjects().get(key);
             int count = neoList.size();
             System.out.println("For Date: " +
                     key +
                     " there are " +
                     count + " near earth objects");
-            String code = "\u001B[0m";
 
-            // for each neo
+            String code = "\u001B[0m";
+// for each neo
             for (Neo n : neoList) {
                 // if potentially hazardous -- change text color to red
                 if (n.isPotentiallyHazardousAsteroid()) {
@@ -133,31 +134,33 @@ public class NasaDbCli {
                 System.out.println("\t\tMax: " +
                         n.getEstimatedDiameter().getMiles().getGetEstimatedDiameterMax() + code);
 
+
             }
         }
-        System.out.println("Save a neo to the database? (y/n)");
+
+        System.out.print("Save a neo to the database? (y/n) ");
         if(userInput.nextLine().equalsIgnoreCase("y")){
-            savetoDatabase(date);
+            saveToDatabase(date);
         }
 
 
     }
 
-    private void savetoDatabase (LocalDate date, List<Neo> neoList){
-        System.out.println("Enter the neo id to save: ");
+    private void saveToDatabase(LocalDate date){
+        System.out.print("Enter the neo id to save: ");
         String neoId = userInput.nextLine();
         boolean isFound = false;
-        for (Neo n : neoList) {
+        for (Neo n: neoList){
             if (n.getId().equalsIgnoreCase(neoId)){
                 isFound = true;
+                // call the dao save method
                 neoDao.saveNeo(n, loggedInUser.getUserId(), date);
                 break;
             }
         }
-        if (!isFound) {
+        if (!isFound){
             System.out.println("Neo id not found!");
         }
-
     }
 
     /**
